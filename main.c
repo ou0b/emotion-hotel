@@ -20,8 +20,8 @@
 #include <math.h>
 #include <errno.h>
 
-#define SCREEN_W 920
-#define SCREEN_H 670
+#define SCREEN_W 1280
+#define SCREEN_H 720
 #define MAX_RECORDS 200
 #define TEXT 256
 #define NOTE 768
