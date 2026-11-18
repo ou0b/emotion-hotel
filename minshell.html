@@ -1,50 +1,15 @@
-<!doctype html>
-<html lang="zh-TW">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>情緒飯店 - Emotion Hotel</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #222; /* 全螢幕時邊緣呈現深邃電影感黑底，不突兀 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        /* 保證在任何螢幕解析度下、全螢幕時自動以最佳比例滿版居中，且像素邊緣極致銳利 */
-        canvas.emscripten {
-            border: 0 none;
-            outline: none;
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            max-width: 100vw;
-            max-height: 100vh;
-            aspect-ratio: 16 / 9;
-            object-fit: contain;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
-        }
-    </style>
-</head>
-<body>
-    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
-    <script type='text/javascript'>
-        var Module = {
-            preRun: [],
-            postRun: [],
-            print: function(text) { console.log(text); },
-            printErr: function(text) { console.error(text); },
-            canvas: (function() {
-                var canvas = document.getElementById('canvas');
-                return canvas;
-            })()
-        };
-    </script>
-    {{{ SCRIPT }}}
-</body>
-</html>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+        width: 100%; height: 100%; overflow: hidden;
+        background: #111; /* 全螢幕時黑邊與螢幕融合 */
+        display: flex; align-items: center; justify-content: center;
+    }
+    canvas.emscripten {
+        border: 0 none; outline: none;
+        width: 100vw; height: 100vh;
+        max-width: 100vw; max-height: 100vh;
+        aspect-ratio: 16 / 9;
+        object-fit: contain;
+    }
+</style>
