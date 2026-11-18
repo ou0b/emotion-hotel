@@ -8,86 +8,37 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
             width: 100%; height: 100%; overflow: hidden;
-            background: #18191c; /* 邊緣深色背景，沉浸感極佳 */
+            background: #f7f8fb;
             display: flex; align-items: center; justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
         }
-
-        /* 畫布：保持 16:9 比例並強制最大化填滿視窗 */
+        /* 畫布強制 100% 填滿視窗，不留任何黑邊 */
         canvas.emscripten {
             border: 0 none; outline: none;
-            width: 100vw; height: 56.25vw; /* 16:9 標準比例 */
-            max-height: 100vh; max-width: 177.78vh; /* 16:9 上限 */
+            width: 100vw;
+            height: 100vh;
             display: block;
             image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        /* 浮動全螢幕按鈕 */
-        #fs-btn {
-            position: fixed;
-            bottom: 18px;
-            right: 18px;
-            background: rgba(255, 255, 255, 0.9);
-            border: none;
-            border-radius: 50px;
-            padding: 9px 18px;
-            font-size: 14px;
-            font-weight: bold;
-            color: #2c3e50;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-            z-index: 100;
-            backdrop-filter: blur(8px);
-            transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
-        }
-        #fs-btn:hover {
-            background: #ffffff;
-            transform: scale(1.06);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-        }
-
-        /* 手機直立時的貼心旋轉提示層 */
-        #rotate-hint {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(35, 45, 65, 0.96);
-            color: #ffffff;
-            z-index: 999;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 24px;
-        }
-        #rotate-hint .icon { font-size: 52px; margin-bottom: 16px; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        
-        /* 當螢幕為直向 (Portrait) 且寬度小於 900px 時自動跳出提示 */
-        @media screen and (orientation: portrait) and (max-width: 900px) {
-            #rotate-hint { display: flex; }
         }
     </style>
 </head>
 <body>
-    <!-- 手機直拿提示 -->
-    <div id="rotate-hint">
-        <div class="icon">📱 ↺</div>
-        <h2 style="letter-spacing: 1px;">請將手機轉為橫向</h2>
-        <p style="margin-top: 10px; opacity: 0.85; font-size: 15px;">橫向瀏覽才能完整體驗情緒飯店的各項設施喔！</p>
-    </div>
-
-    <!-- raylib 遊戲畫布 -->
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
-    
-    <!-- 全螢幕切換按鈕 -->
-    <button id="fs-btn" onclick="toggleFullScreen()">⛶ 全螢幕 / Fullscreen</button>
 
     <script type='text/javascript'>
+        function resizeCanvas() {
+            var canvas = document.getElementById('canvas');
+            // 取得高 DPI 螢幕真實像素比 (Retina 螢幕 2x, 正常 1x)
+            var dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', resizeCanvas);
+
         var Module = {
-            preRun: [],
+            preRun: [resizeCanvas],
             postRun: [],
             print: function(text) { console.log(text); },
             printErr: function(text) { console.error(text); },
@@ -96,27 +47,7 @@
                 return canvas;
             })()
         };
-
-        function toggleFullScreen() {
-            var canvas = document.getElementById('canvas');
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (canvas.requestFullscreen) {
-                    canvas.requestFullscreen();
-                } else if (canvas.webkitRequestFullscreen) {
-                    canvas.webkitRequestFullscreen();
-                } else if (canvas.msRequestFullscreen) {
-                    canvas.msRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                }
-            }
-        }
     </script>
     {{{ SCRIPT }}}
 </body>
 </html>
-
