@@ -10,7 +10,6 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            /* 【修復 1】：背景改為與 C 語言完全一致的晨曦粉暖漸層，徹底消滅突兀黑邊！ */
             background: linear-gradient(180deg, #fff2ee 0%, #e8f2fc 100%);
             display: flex;
             align-items: center;
@@ -18,29 +17,25 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
         }
 
-        /* 【修復 2】：高畫質畫布渲染，避免瀏覽器拉伸抹糊字型 */
+        /* 恢復 GPU 原生硬體平滑插值，徹底告別發虛水霧感 */
         canvas.emscripten {
             border: 0 none;
             outline: none;
             display: block;
             width: 100vw;
-            height: 56.25vw; /* 保持標準 16:9 比例 */
+            height: 56.25vw;
             max-height: 100vh;
             max-width: 177.78vh;
             background-color: transparent;
-            /* 強制高清晰銳利度與抗鋸齒 */
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
-            box-shadow: 0 12px 48px rgba(100, 110, 140, 0.15);
+            box-shadow: 0 12px 48px rgba(100, 110, 140, 0.12);
             border-radius: 8px;
         }
 
-        /* 浮動全螢幕按鈕（精緻柔白磨砂風格） */
         #fs-btn {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.88);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 50px;
             padding: 9px 20px;
@@ -51,15 +46,10 @@
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
             z-index: 100;
             backdrop-filter: blur(10px);
-            transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, background 0.2s;
         }
-        #fs-btn:hover {
-            background: #ffffff;
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        }
+        #fs-btn:hover { background: #ffffff; transform: scale(1.05); }
 
-        /* 手機直立時的貼心旋轉提示 */
         #rotate-hint {
             display: none;
             position: fixed;
@@ -113,8 +103,6 @@
             } else {
                 if (document.exitFullscreen) {
                     document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
                 }
             }
         }
