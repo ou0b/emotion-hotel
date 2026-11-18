@@ -2,7 +2,7 @@ name: Deploy Emotion Hotel Web
 
 on:
   push:
-    branches: [ main ] # 當你更新 main 分支時自動執行
+    branches: [ main ]
 
 jobs:
   build-and-deploy:
@@ -11,7 +11,7 @@ jobs:
       - name: 下載程式碼
         uses: actions/checkout@v3
 
-      - name: 安裝 Emscripten (Web 編譯器)
+      - name: 安裝 Emscripten
         uses: mymindstorm/setup-emsdk@v12
         with:
           version: 3.1.50
@@ -26,15 +26,17 @@ jobs:
       - name: 編譯 main.c 為 WebAssembly 網頁
         run: |
           mkdir build
+          RAYLIB_LIB=$(find ./raylib/src -name "libraylib*.a" | head -n 1)
+          echo "Found raylib lib at: $RAYLIB_LIB"
           emcc -o build/index.html main.c \
             -Os -Wall \
-            -I./raylib/src ./raylib/src/libraylib.a \
+            -I./raylib/src "$RAYLIB_LIB" \
             -s USE_GLFW=3 -s ASYNCIFY -s TOTAL_MEMORY=67108864 \
             -DPLATFORM_WEB \
             --preload-file word.ttf \
-            --preload-file AEROHEAD - Fragments.mp3 \
-            --preload-file Nettson - Last Promise.mp3 \
-            --preload-file Savfk - Rounding.mp3 \
+            --preload-file "AEROHEAD - Fragments.mp3" \
+            --preload-file "Nettson - Last Promise.mp3" \
+            --preload-file "Savfk - Rounding.mp3" \
             --shell-file ./raylib/src/shell.html
 
       - name: 發布到 GitHub Pages
