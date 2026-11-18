@@ -1,7 +1,7 @@
 /*
- * 情緒飯店 Emotion Hotel（現代高畫質旗艦版）
- * 包含：四按鈕主頁、獨立語言選單、自適應三首 BGM、月曆管家分析、
- *       12項需求、Room Service、退房回顧、乾淨清晰加粗字型引擎
+ * 情緒飯店 Emotion Hotel（全裝置自適應響應式旗艦版）
+ * 支援：動態螢幕比例填滿、零黑邊、手機/平板/電腦自動排版、
+ *       四按鈕主頁、獨立語言頁、三首自訂BGM、動態字庫無缺字、持久化保存
  */
 #include "raylib.h"
 #include <stdio.h>
@@ -10,11 +10,13 @@
 #include <time.h>
 #include <math.h>
 #include <errno.h>
+
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
 #endif
-#define SCREEN_W 1280
-#define SCREEN_H 720
+
+#define DEFAULT_W 1280
+#define DEFAULT_H 720
 #define MAX_RECORDS 200
 #define TEXT 256
 #define NOTE 768
@@ -22,7 +24,7 @@
 #define FONT_BASE_SIZE 64
 #define MAX_CP 8192
 #define NUM_TRACKS 3
-#define NUM_PARTICLES 42
+#define NUM_PARTICLES 45
 
 /* ---------- 資料結構 ---------- */
 typedef struct {
@@ -96,7 +98,6 @@ static const char *L_FEEDBACK[6] = {
     "這個月累積了不少「疲憊」。你的身心正在提醒你放慢腳步，今晚放下所有包袱，好好睡個飽覺吧。"
 };
 
-/* 預載基礎字型池 */
 static const char *UI_POOL = "、。一上下不並中主也了事五人什今介他以件份休伴位住你來依保修個值做停備傳傷允先光免入內全共其具再分列到刺前力功動勾卡原取受句只可台同吸周呼和哪哭唯問啟喝單嘗回因圍圖在坐型執填增多大天失好字存安完客容宿寫對小少工己已平序店度廳式張強形待後徑得心快息悲情想感態慮憊成我或房所手找把抱按接控換擇擔改放敗整數文料新方既日時暫更替最會有未束杯查格框案構樂標模機檔檢欄次歌歡此步氣水求決沒沿法消清游源準溫激為無焦版狀現理生用由留略畫疲發白的目直相看睡知示程空第筆算管紀紙結給緒編繪置美聲聽股能臨自與舊茶著行表被補製複要覺解計訊記許試話說請讀讓資路身載輯輸迎近返追退這通進運過道達選避部都重量錄長閉開間關限陪離雨需靜面音頁項題類顧飯首體麼點（），／：；？「」—·/語言設定選擇繁體中文英文播放暫停回顧絮語萌發新芽擁抱允許金色光芒明亮前行深呼吸安全安置從容放慢包袱睡飽覺離開旅館開始記錄";
 
 /* ---------- 音樂系統 ---------- */
@@ -110,7 +111,7 @@ static Music bgm_tracks[NUM_TRACKS];
 static int cur_track = 0;
 static bool music_playing = false;
 
-/* ---------- 動態粒子系統 ---------- */
+/* ---------- 動態光點粒子 ---------- */
 typedef struct {
     Vector2 pos;
     float radius, speedY, waveOffset;
@@ -120,7 +121,7 @@ static Particle particles[NUM_PARTICLES];
 
 static void InitParticles(int w, int h) {
     for (int i = 0; i < NUM_PARTICLES; i++) {
-        particles[i].pos = (Vector2){ (float)(rand() % w), (float)(rand() % h) };
+        particles[i].pos = (Vector2){ (float)(rand() % (w > 0 ? w : DEFAULT_W)), (float)(rand() % (h > 0 ? h : DEFAULT_H)) };
         particles[i].radius = 12.0f + (float)(rand() % 26);
         particles[i].speedY = 0.25f + (float)(rand() % 45) / 100.0f;
         particles[i].waveOffset = (float)(rand() % 360);
@@ -299,7 +300,7 @@ static void delete_record_item(int idx) {
 }
 
 /* =====================================================
-   動態字碼收集與高解析字型引擎
+   動態字型引擎
    ===================================================== */
 static Font font;
 static int font_loaded = 0;
@@ -345,13 +346,9 @@ static void load_font_engine(void) {
     font_dirty = 0;
 }
 
-/* =====================================================
-   【關鍵優化】：清晰度 100% 且自然飽滿的加粗文字繪製
-   只做極微量(0.5px)對角平滑補強，筆畫紮實不黏字、無殘影重疊！
-   ===================================================== */
+/* 0.5px 純淨微加粗（不失真、不重疊） */
 static inline void DrawTextExBold(const char *text, Vector2 pos, float fontSize, float spacing, Color color) {
     need_text(text);
-    // 0.5px 微幅均勻擴展，呈現真正粗體印刷感，筆畫完全不模糊
     DrawTextEx(font, text, (Vector2){ pos.x + 0.5f, pos.y + 0.5f }, fontSize, spacing, color);
     DrawTextEx(font, text, pos, fontSize, spacing, color);
 }
@@ -444,11 +441,10 @@ static int FindRecordByDate(const char *date_str) {
    ===================================================== */
 int main(void) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
-    InitWindow(SCREEN_W, SCREEN_H, "情緒飯店 - Emotion Hotel");
+    InitWindow(DEFAULT_W, DEFAULT_H, "情緒飯店 - Emotion Hotel");
     InitAudioDevice();
     InitCustomSounds();
-    InitParticles(SCREEN_W, SCREEN_H);
+    InitParticles(DEFAULT_W, DEFAULT_H);
     SetTargetFPS(60);
 
     for (int i = 32; i < 127; i++) add_cp(i);
@@ -497,32 +493,24 @@ int main(void) {
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
         float runTime = (float)GetTime();
 
-                
-                if (IsKeyPressed(KEY_F11)) {
+        // 【響應式核心】動態即時取得設備目前真實寬高
+        int screen_w = GetScreenWidth();
+        int screen_h = GetScreenHeight();
+
+        if (IsKeyPressed(KEY_F11)) {
         #if defined(PLATFORM_WEB)
-            // 網頁版：直接呼叫瀏覽器全螢幕 API
             emscripten_run_script(
                 "var c = document.getElementById('canvas');"
-                "if (!document.fullscreenElement) {"
-                "    if (c.requestFullscreen) c.requestFullscreen();"
-                "    else if (c.webkitRequestFullscreen) c.webkitRequestFullscreen();"
-                "} else {"
-                "    if (document.exitFullscreen) document.exitFullscreen();"
-                "}"
+                "if (!document.fullscreenElement) { if (c.requestFullscreen) c.requestFullscreen(); }"
+                "else { if (document.exitFullscreen) document.exitFullscreen(); }"
             );
         #else
-            // Windows 本地版：使用原本完美的最大化視窗
-            if (IsWindowMaximized()) {
-                RestoreWindow();
-            } else {
-                MaximizeWindow();
-            }
+            if (IsWindowMaximized()) RestoreWindow();
+            else MaximizeWindow();
         #endif
         }
 
-
         if (music_playing) UpdateMusicStream(bgm_tracks[cur_track]);
-
         Vector2 mouse = GetMousePosition();
 
         int key = GetCharPressed();
@@ -569,101 +557,98 @@ int main(void) {
 
         BeginDrawing();
 
-        // ==================== 1. 主畫面（四顆大按鈕居中） ====================
+        // ==================== 1. 主畫面（自適應置中） ====================
         if (page == P_LOBBY) {
-            float cardW = 560, cardH = 580;
-            Rectangle glassCard = { (SCREEN_W - cardW) / 2.0f, (SCREEN_H - cardH) / 2.0f, cardW, cardH };
-            DrawUnifiedBackground(SCREEN_W, SCREEN_H, runTime, glassCard);
+            float cardW = (screen_w < 600) ? (screen_w * 0.92f) : 560.0f;
+            float cardH = (screen_h < 640) ? (screen_h * 0.92f) : 580.0f;
+            Rectangle glassCard = { (screen_w - cardW) / 2.0f, (screen_h - cardH) / 2.0f, cardW, cardH };
+            DrawUnifiedBackground(screen_w, screen_h, runTime, glassCard);
 
-            Rectangle titleBox = { 0, glassCard.y + 28, SCREEN_W, 60 };
-            DrawCenteredTextBold(cur_lang ? "情緒飯店" : "Emotion Hotel", titleBox, 56, 3, (Color){ 40, 50, 75, 255 });
+            Rectangle titleBox = { 0, glassCard.y + 28, (float)screen_w, 60 };
+            DrawCenteredTextBold(cur_lang ? "情緒飯店" : "Emotion Hotel", titleBox, (screen_w < 600) ? 44 : 56, 3, (Color){ 40, 50, 75, 255 });
 
-            Rectangle subBox = { 0, glassCard.y + 92, SCREEN_W, 32 };
-            DrawCenteredTextBold(cur_lang ? "給每種情緒一個溫暖歇息的房間" : "A quiet haven for every thought and feeling", subBox, 22, 1, (Color){ 105, 120, 140, 255 });
+            Rectangle subBox = { 0, glassCard.y + 88, (float)screen_w, 32 };
+            DrawCenteredTextBold(cur_lang ? "給每種情緒一個溫暖歇息的房間" : "A quiet haven for every thought and feeling", subBox, (screen_w < 600) ? 17 : 22, 1, (Color){ 105, 120, 140, 255 });
 
-            // 四個大按鈕 (由上到下：開始記錄 -> 音樂設定 -> 語言設定 -> 離開旅館)
-            float btnW = 380, btnH = 62, btnX = (SCREEN_W - btnW) / 2.0f;
-            Rectangle btnStart = { btnX, glassCard.y + 145, btnW, btnH };
-            Rectangle btnMusic = { btnX, glassCard.y + 225, btnW, btnH };
-            Rectangle btnLang  = { btnX, glassCard.y + 305, btnW, btnH };
-            Rectangle btnExit  = { btnX, glassCard.y + 385, btnW, btnH };
+            float btnW = (screen_w < 600) ? (cardW * 0.85f) : 380.0f;
+            float btnH = (screen_h < 640) ? 54.0f : 62.0f;
+            float btnSpacing = (screen_h < 640) ? 68.0f : 80.0f;
+            float btnX = (screen_w - btnW) / 2.0f;
 
-            if (DrawInteractiveButton(cur_lang ? "開始記錄" : "Start Diary", btnStart, (Color){ 76, 175, 80, 255 }, WHITE, 26)) {
+            Rectangle btnStart = { btnX, glassCard.y + 140, btnW, btnH };
+            Rectangle btnMusic = { btnX, glassCard.y + 140 + btnSpacing, btnW, btnH };
+            Rectangle btnLang  = { btnX, glassCard.y + 140 + btnSpacing * 2, btnW, btnH };
+            Rectangle btnExit  = { btnX, glassCard.y + 140 + btnSpacing * 3, btnW, btnH };
+
+            if (DrawInteractiveButton(cur_lang ? "開始記錄" : "Start Diary", btnStart, (Color){ 76, 175, 80, 255 }, WHITE, (screen_w < 600) ? 22 : 26)) {
                 page = P_CALENDAR;
             }
-            if (DrawInteractiveButton(cur_lang ? "音樂設定" : "Music Settings", btnMusic, (Color){ 230, 126, 34, 255 }, WHITE, 26)) {
+            if (DrawInteractiveButton(cur_lang ? "音樂設定" : "Music Settings", btnMusic, (Color){ 230, 126, 34, 255 }, WHITE, (screen_w < 600) ? 22 : 26)) {
                 page = P_MUSIC;
             }
-            if (DrawInteractiveButton(cur_lang ? "語言設定" : "Language Settings", btnLang, (Color){ 70, 130, 180, 255 }, WHITE, 26)) {
-                page = P_LANG; // 點進去第二頁選擇！
+            if (DrawInteractiveButton(cur_lang ? "語言設定" : "Language Settings", btnLang, (Color){ 70, 130, 180, 255 }, WHITE, (screen_w < 600) ? 22 : 26)) {
+                page = P_LANG;
             }
-            if (DrawInteractiveButton(cur_lang ? "離開旅館" : "Exit Hotel", btnExit, (Color){ 215, 80, 80, 255 }, WHITE, 26)) {
-                break; // 離開
+            if (DrawInteractiveButton(cur_lang ? "離開旅館" : "Exit Hotel", btnExit, (Color){ 215, 80, 80, 255 }, WHITE, (screen_w < 600) ? 22 : 26)) {
+                break;
             }
 
-            Rectangle hintBox = { 0, glassCard.y + cardH - 46, SCREEN_W, 30 };
+            Rectangle hintBox = { 0, glassCard.y + cardH - 42, (float)screen_w, 28 };
             DrawCenteredTextBold(TextFormat("目前累積入住：%d 筆紀錄", count), hintBox, 18, 1, GRAY);
 
-        // ==================== 2. 獨立語言設定頁面（第二頁） ====================
+        // ==================== 2. 獨立語言設定頁 ====================
         } else if (page == P_LANG) {
-            float cardW = 900, cardH = 580;
-            Rectangle glassCard = { (SCREEN_W - cardW) / 2.0f, (SCREEN_H - cardH) / 2.0f, cardW, cardH };
-            DrawUnifiedBackground(SCREEN_W, SCREEN_H, runTime, glassCard);
+            float cardW = (screen_w < 950) ? (screen_w * 0.92f) : 900.0f;
+            float cardH = (screen_h < 640) ? (screen_h * 0.92f) : 580.0f;
+            Rectangle glassCard = { (screen_w - cardW) / 2.0f, (screen_h - cardH) / 2.0f, cardW, cardH };
+            DrawUnifiedBackground(screen_w, screen_h, runTime, glassCard);
 
-            DrawTextExBold(cur_lang ? "語言設定" : "Language Settings", (Vector2){ glassCard.x + 60, glassCard.y + 50 }, 36, 2, (Color){ 44, 62, 80, 255 });
+            DrawTextExBold(cur_lang ? "語言設定" : "Language Settings", (Vector2){ glassCard.x + 40, glassCard.y + 40 }, 34, 2, (Color){ 44, 62, 80, 255 });
 
-            Rectangle btnZh = { glassCard.x + 60, glassCard.y + 140, 480, 68 };
-            Rectangle btnEn = { glassCard.x + 60, glassCard.y + 235, 480, 68 };
+            float btnW = (cardW - 80 > 480) ? 480 : (cardW - 80);
+            Rectangle btnZh = { glassCard.x + 40, glassCard.y + 120, btnW, 66 };
+            Rectangle btnEn = { glassCard.x + 40, glassCard.y + 210, btnW, 66 };
 
             Color cZh = (cur_lang == 1) ? (Color){ 46, 204, 113, 255 } : (Color){ 235, 238, 245, 255 };
             Color cEn = (cur_lang == 0) ? (Color){ 46, 204, 113, 255 } : (Color){ 235, 238, 245, 255 };
 
-            if (DrawInteractiveButton("繁體中文 (Traditional Chinese)", btnZh, cZh, (cur_lang == 1) ? WHITE : DARKGRAY, 24)) {
-                cur_lang = 1;
-            }
-            if (DrawInteractiveButton("English", btnEn, cEn, (cur_lang == 0) ? WHITE : DARKGRAY, 24)) {
-                cur_lang = 0;
-            }
+            if (DrawInteractiveButton("繁體中文 (Traditional Chinese)", btnZh, cZh, (cur_lang == 1) ? WHITE : DARKGRAY, 24)) cur_lang = 1;
+            if (DrawInteractiveButton("English", btnEn, cEn, (cur_lang == 0) ? WHITE : DARKGRAY, 24)) cur_lang = 0;
 
-            Rectangle btnBack = { glassCard.x + 60, glassCard.y + 450, 160, 54 };
-            if (DrawInteractiveButton(cur_lang ? "返回首頁" : "Back", btnBack, (Color){ 140, 150, 165, 255 }, WHITE, 22)) {
-                page = P_LOBBY;
-            }
+            Rectangle btnBack = { glassCard.x + 40, glassCard.y + cardH - 80, 160, 52 };
+            if (DrawInteractiveButton(cur_lang ? "返回首頁" : "Back", btnBack, (Color){ 140, 150, 165, 255 }, WHITE, 22)) page = P_LOBBY;
 
-        // ==================== 3. 月曆畫面（含回饋絮語） ====================
+        // ==================== 3. 月曆畫面（自適應 7 等分網格） ====================
         } else if (page == P_CALENDAR) {
-            float cardW = 1200, cardH = 680;
-            Rectangle glassCard = { (SCREEN_W - cardW) / 2.0f, (SCREEN_H - cardH) / 2.0f, cardW, cardH };
-            DrawUnifiedBackground(SCREEN_W, SCREEN_H, runTime, glassCard);
+            float cardW = (screen_w * 0.96f > 1240) ? 1240.0f : (screen_w * 0.96f);
+            float cardH = (screen_h * 0.96f > 690)  ? 690.0f  : (screen_h * 0.96f);
+            Rectangle glassCard = { (screen_w - cardW) / 2.0f, (screen_h - cardH) / 2.0f, cardW, cardH };
+            DrawUnifiedBackground(screen_w, screen_h, runTime, glassCard);
 
-            DrawTextExBold(TextFormat("%d / %02d", cur_year, cur_month), (Vector2){ glassCard.x + 40, glassCard.y + 20 }, 34, 2, (Color){ 44, 62, 80, 255 });
+            DrawTextExBold(TextFormat("%d / %02d", cur_year, cur_month), (Vector2){ glassCard.x + 30, glassCard.y + 18 }, 32, 2, (Color){ 44, 62, 80, 255 });
 
-            Rectangle btnPrev = { glassCard.x + 220, glassCard.y + 18, 48, 40 };
-            Rectangle btnNext = { glassCard.x + 280, glassCard.y + 18, 48, 40 };
-            Rectangle btnHome = { glassCard.x + cardW - 170, glassCard.y + 18, 130, 42 };
+            Rectangle btnPrev = { glassCard.x + 200, glassCard.y + 16, 44, 38 };
+            Rectangle btnNext = { glassCard.x + 252, glassCard.y + 16, 44, 38 };
+            Rectangle btnHome = { glassCard.x + cardW - 145, glassCard.y + 16, 125, 38 };
 
-            if (DrawInteractiveButton("<", btnPrev, (Color){ 235, 238, 245, 255 }, BLACK, 24)) {
-                if (--cur_month < 1) { cur_month = 12; cur_year--; }
-            }
-            if (DrawInteractiveButton(">", btnNext, (Color){ 235, 238, 245, 255 }, BLACK, 24)) {
-                if (++cur_month > 12) { cur_month = 1; cur_year++; }
-            }
-            if (DrawInteractiveButton(cur_lang ? "返回首頁" : "Lobby", btnHome, (Color){ 140, 150, 165, 255 }, WHITE, 22)) {
-                page = P_LOBBY;
-            }
+            if (DrawInteractiveButton("<", btnPrev, (Color){ 235, 238, 245, 255 }, BLACK, 22)) { if (--cur_month < 1) { cur_month = 12; cur_year--; } }
+            if (DrawInteractiveButton(">", btnNext, (Color){ 235, 238, 245, 255 }, BLACK, 22)) { if (++cur_month > 12) { cur_month = 1; cur_year++; } }
+            if (DrawInteractiveButton(cur_lang ? "返回首頁" : "Lobby", btnHome, (Color){ 140, 150, 165, 255 }, WHITE, 20)) page = P_LOBBY;
 
             const char *weeks[7] = { "日", "一", "二", "三", "四", "五", "六" };
-            float gridStartX = glassCard.x + 35;
-            float cellW = 158, cellH = 66;
+            float padX = 25.0f;
+            float gridStartX = glassCard.x + padX;
+            float gridW = cardW - (padX * 2.0f);
+            float cellW = (gridW - 24.0f) / 7.0f;
+            float cellH = (cardH > 640) ? 64.0f : 50.0f;
 
             for (int i = 0; i < 7; i++) {
-                Rectangle weekBox = { gridStartX + i * (cellW + 4), glassCard.y + 68, cellW, 26 };
-                DrawCenteredTextBold(weeks[i], weekBox, 22, 1, (Color){ 140, 150, 165, 255 });
+                Rectangle weekBox = { gridStartX + i * (cellW + 4), glassCard.y + 62, cellW, 24 };
+                DrawCenteredTextBold(weeks[i], weekBox, 20, 1, (Color){ 140, 150, 165, 255 });
             }
 
             int days = GetDaysInMonth(cur_year, cur_month);
             int startDay = GetFirstDayOfWeek(cur_year, cur_month);
-
             int emo_counts[6] = {0};
             int month_records = 0;
 
@@ -671,7 +656,7 @@ int main(void) {
                 int cellIdx = (d - 1) + startDay;
                 int col = cellIdx % 7;
                 int row = cellIdx / 7;
-                Rectangle cell = { gridStartX + col * (cellW + 4), glassCard.y + 100 + row * (cellH + 5), cellW, cellH };
+                Rectangle cell = { gridStartX + col * (cellW + 4), glassCard.y + 92 + row * (cellH + 5), cellW, cellH };
 
                 char dateStr[32];
                 snprintf(dateStr, sizeof(dateStr), "%04d-%02d-%02d", cur_year, cur_month, d);
@@ -689,11 +674,11 @@ int main(void) {
                 DrawRectangleRounded(cell, 0.2f, 6, cellColor);
                 DrawRectangleLinesEx(cell, hovered ? 2 : 1, hovered ? (Color){ 52, 152, 219, 255 } : (Color){ 225, 230, 240, 255 });
 
-                DrawTextExBold(TextFormat("%d", d), (Vector2){ cell.x + 10, cell.y + 6 }, 20, 1, (recIdx != -1) ? WHITE : DARKGRAY);
+                DrawTextExBold(TextFormat("%d", d), (Vector2){ cell.x + 8, cell.y + 5 }, 18, 1, (recIdx != -1) ? WHITE : DARKGRAY);
 
                 if (recIdx != -1) {
-                    Rectangle labelBox = { cell.x, cell.y + 26, cell.width, 32 };
-                    DrawCenteredTextBold(cur_lang ? names_zh[records[recIdx].emotion] : names_en[records[recIdx].emotion], labelBox, 20, 1, WHITE);
+                    Rectangle labelBox = { cell.x, cell.y + (cellH * 0.42f), cell.width, cellH * 0.5f };
+                    DrawCenteredTextBold(cur_lang ? names_zh[records[recIdx].emotion] : names_en[records[recIdx].emotion], labelBox, (cellW < 120) ? 16 : 19, 1, WHITE);
                 }
 
                 if (hovered && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
@@ -716,192 +701,225 @@ int main(void) {
                 }
             }
 
-            Rectangle statPanel = { gridStartX, glassCard.y + 530, cellW * 7 + 24, 130 };
+            Rectangle statPanel = { gridStartX, glassCard.y + cardH - 142, gridW, 126 };
             DrawRectangleRounded(statPanel, 0.15f, 6, (Color){ 255, 255, 255, 235 });
             DrawRectangleLinesEx(statPanel, 1, (Color){ 220, 226, 238, 255 });
 
-            DrawTextExBold("本月情緒回顧 · 管家絮語", (Vector2){ statPanel.x + 25, statPanel.y + 12 }, 22, 1, (Color){ 44, 62, 80, 255 });
+            DrawTextExBold("本月情緒回顧 · 管家絮語", (Vector2){ statPanel.x + 20, statPanel.y + 10 }, 20, 1, (Color){ 44, 62, 80, 255 });
 
             if (month_records == 0) {
                 DrawTextExBold("這個月還沒有任何房客入住紀錄喔！點擊上方的日期，為今天的心情留下一抹色彩吧。", 
-                               (Vector2){ statPanel.x + 25, statPanel.y + 55 }, 20, 1, (Color){ 120, 130, 145, 255 });
+                               (Vector2){ statPanel.x + 20, statPanel.y + 50 }, 18, 1, (Color){ 120, 130, 145, 255 });
             } else {
                 int max_emo = 0;
                 for (int i = 1; i < 6; i++) {
                     if (emo_counts[i] > emo_counts[max_emo]) max_emo = i;
                 }
-                Rectangle statTag = { statPanel.x + 25, statPanel.y + 44, 130, 36 };
+                Rectangle statTag = { statPanel.x + 20, statPanel.y + 40, 110, 32 };
                 DrawRectangleRounded(statTag, 0.25f, 4, ecolor[max_emo]);
-                DrawCenteredTextBold(cur_lang ? names_zh[max_emo] : names_en[max_emo], statTag, 20, 1, WHITE);
+                DrawCenteredTextBold(cur_lang ? names_zh[max_emo] : names_en[max_emo], statTag, 18, 1, WHITE);
 
                 DrawTextExBold(TextFormat("本月共入住 %d 天，其中「%s」最常來訪（共 %d 次）", month_records, names_zh[max_emo], emo_counts[max_emo]), 
-                               (Vector2){ statPanel.x + 175, statPanel.y + 50 }, 20, 1, DARKGRAY);
-                DrawTextExBold(L_FEEDBACK[max_emo], (Vector2){ statPanel.x + 25, statPanel.y + 90 }, 20, 1, (Color){ 70, 85, 105, 255 });
+                               (Vector2){ statPanel.x + 145, statPanel.y + 45 }, 18, 1, DARKGRAY);
+                DrawTextExBold(L_FEEDBACK[max_emo], (Vector2){ statPanel.x + 20, statPanel.y + 82 }, 18, 1, (Color){ 70, 85, 105, 255 });
             }
 
-        // ==================== 4. 入住流程 1：選擇情緒 ====================
+        // ==================== 4. 入住流程 1：情緒選擇 ====================
         } else if (page == P_CI_EMOTION) {
-            float cardW = 1200, cardH = 680;
-            Rectangle glassCard = { (SCREEN_W - cardW) / 2.0f, (SCREEN_H - cardH) / 2.0f, cardW, cardH };
-            DrawUnifiedBackground(SCREEN_W, SCREEN_H, runTime, glassCard);
+            float cardW = (screen_w * 0.94f > 1200) ? 1200.0f : (screen_w * 0.94f);
+            float cardH = (screen_h * 0.94f > 680)  ? 680.0f  : (screen_h * 0.94f);
+            Rectangle glassCard = { (screen_w - cardW) / 2.0f, (screen_h - cardH) / 2.0f, cardW, cardH };
+            DrawUnifiedBackground(screen_w, screen_h, runTime, glassCard);
 
-            DrawTextExBold(TextFormat("選擇今日情緒  |  %s", work.date), (Vector2){ glassCard.x + 40, glassCard.y + 30 }, 30, 2, (Color){ 44, 62, 80, 255 });
+            DrawTextExBold(TextFormat("選擇今日情緒  |  %s", work.date), (Vector2){ glassCard.x + 40, glassCard.y + 25 }, 28, 2, (Color){ 44, 62, 80, 255 });
+
+            float btnCols = (cardW < 750) ? 2.0f : 3.0f;
+            float eBtnW = (cardW - 80.0f - (btnCols - 1) * 20.0f) / btnCols;
+            float eBtnH = (cardH < 620) ? 65.0f : 85.0f;
 
             for (int i = 0; i < 6; i++) {
-                Rectangle btn = { glassCard.x + 40 + (i % 3) * 380, glassCard.y + 90 + (i / 3) * 110, 350, 90 };
-                Color c = (work.emotion == i) ? ecolor[i] : (Color){ 240, 242, 248, 255 };
-                if (DrawInteractiveButton(cur_lang ? names_zh[i] : names_en[i], btn, c, (work.emotion == i) ? WHITE : DARKGRAY, 28)) {
+                int r = i / (int)btnCols;
+                int c = i % (int)btnCols;
+                Rectangle btn = { glassCard.x + 40 + c * (eBtnW + 20), glassCard.y + 75 + r * (eBtnH + 15), eBtnW, eBtnH };
+                Color col = (work.emotion == i) ? ecolor[i] : (Color){ 240, 242, 248, 255 };
+                if (DrawInteractiveButton(cur_lang ? names_zh[i] : names_en[i], btn, col, (work.emotion == i) ? WHITE : DARKGRAY, 26)) {
                     work.emotion = i;
                 }
             }
 
-            DrawTextExBold(welcome[work.emotion], (Vector2){ glassCard.x + 40, glassCard.y + 340 }, 24, 1, (Color){ 200, 90, 120, 255 });
+            float welcomeY = glassCard.y + 75 + (6 / (int)btnCols) * (eBtnH + 15) + 10;
+            DrawTextExBold(welcome[work.emotion], (Vector2){ glassCard.x + 40, welcomeY }, 22, 1, (Color){ 200, 90, 120, 255 });
 
-            DrawTextExBold("情緒強度 (1-5)：", (Vector2){ glassCard.x + 40, glassCard.y + 400 }, 24, 1, DARKGRAY);
+            DrawTextExBold("情緒強度 (1-5)：", (Vector2){ glassCard.x + 40, welcomeY + 45 }, 22, 1, DARKGRAY);
             for (int i = 1; i <= 5; i++) {
-                Rectangle btn = { glassCard.x + 220 + (i - 1) * 85, glassCard.y + 390, 70, 50 };
+                Rectangle btn = { glassCard.x + 200 + (i - 1) * 75, welcomeY + 38, 62, 42 };
                 Color c = (work.intensity == i) ? (Color){ 52, 73, 94, 255 } : (Color){ 240, 242, 248, 255 };
-                if (DrawInteractiveButton(TextFormat("%d", i), btn, c, (work.intensity == i) ? WHITE : BLACK, 24)) {
+                if (DrawInteractiveButton(TextFormat("%d", i), btn, c, (work.intensity == i) ? WHITE : BLACK, 22)) {
                     work.intensity = i;
                 }
             }
 
-            Rectangle btnBack = { glassCard.x + 40, glassCard.y + 590, 160, 54 };
-            Rectangle btnNext = { glassCard.x + 220, glassCard.y + 590, 160, 54 };
+            Rectangle btnBack = { glassCard.x + 40, glassCard.y + cardH - 75, 150, 50 };
+            Rectangle btnNext = { glassCard.x + 210, glassCard.y + cardH - 75, 150, 50 };
 
-            if (DrawInteractiveButton("返回月曆", btnBack, (Color){ 235, 238, 245, 255 }, DARKGRAY, 22)) page = P_CALENDAR;
-            if (DrawInteractiveButton("下一步", btnNext, (Color){ 52, 152, 219, 255 }, WHITE, 22)) {
+            if (DrawInteractiveButton("返回月曆", btnBack, (Color){ 235, 238, 245, 255 }, DARKGRAY, 20)) page = P_CALENDAR;
+            if (DrawInteractiveButton("下一步", btnNext, (Color){ 52, 152, 219, 255 }, WHITE, 20)) {
                 active_field = 1;
                 page = P_CI_TEXT;
             }
 
         // ==================== 5. 入住流程 2：填寫單據 ====================
         } else if (page == P_CI_TEXT) {
-            float cardW = 1200, cardH = 680;
-            Rectangle glassCard = { (SCREEN_W - cardW) / 2.0f, (SCREEN_H - cardH) / 2.0f, cardW, cardH };
-            DrawUnifiedBackground(SCREEN_W, SCREEN_H, runTime, glassCard);
+            float cardW = (screen_w * 0.94f > 1200) ? 1200.0f : (screen_w * 0.94f);
+            float cardH = (screen_h * 0.94f > 680)  ? 680.0f  : (screen_h * 0.94f);
+            Rectangle glassCard = { (screen_w - cardW) / 2.0f, (screen_h - cardH) / 2.0f, cardW, cardH };
+            DrawUnifiedBackground(screen_w, screen_h, runTime, glassCard);
 
-            DrawTextExBold("填寫入住單（點擊即可輸入）", (Vector2){ glassCard.x + 40, glassCard.y + 20 }, 28, 2, (Color){ 44, 62, 80, 255 });
+            DrawTextExBold("填寫入住單（點擊即可輸入）", (Vector2){ glassCard.x + 40, glassCard.y + 15 }, 26, 2, (Color){ 44, 62, 80, 255 });
+
+            float boxW = cardW - 80.0f;
+            float rowGap = (cardH - 180.0f) / 5.0f;
 
             for (int i = 0; i < 5; i++) {
-                DrawTextExBold(fields[i], (Vector2){ glassCard.x + 40, glassCard.y + 70 + i * 98 }, 20, 1, DARKGRAY);
-                Rectangle box = { glassCard.x + 40, glassCard.y + 98 + i * 98, 1120, 54 };
+                DrawTextExBold(fields[i], (Vector2){ glassCard.x + 40, glassCard.y + 55 + i * rowGap }, 18, 1, DARKGRAY);
+                Rectangle box = { glassCard.x + 40, glassCard.y + 80 + i * rowGap, boxW, rowGap - 30 };
                 DrawRectangleRounded(box, 0.15f, 4, WHITE);
                 DrawRectangleLinesEx(box, (active_field == i + 1) ? 2 : 1, (active_field == i + 1) ? (Color){ 52, 152, 219, 255 } : (Color){ 215, 220, 230, 255 });
-                DrawTextExBold(work.text[i], (Vector2){ box.x + 15, box.y + 15 }, 20, 1, BLACK);
+                DrawTextExBold(work.text[i], (Vector2){ box.x + 12, box.y + (box.height - 22) / 2.0f }, 19, 1, BLACK);
 
                 if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mouse, box)) {
                     active_field = i + 1;
                 }
             }
 
-            Rectangle btnPrev = { glassCard.x + 40, glassCard.y + 600, 150, 50 };
-            Rectangle btnNext = { glassCard.x + 210, glassCard.y + 600, 150, 50 };
+            Rectangle btnPrev = { glassCard.x + 40, glassCard.y + cardH - 65, 140, 48 };
+            Rectangle btnNext = { glassCard.x + 200, glassCard.y + cardH - 65, 140, 48 };
 
-            if (DrawInteractiveButton("上一步", btnPrev, (Color){ 235, 238, 245, 255 }, DARKGRAY, 22)) page = P_CI_EMOTION;
-            if (DrawInteractiveButton("下一步", btnNext, (Color){ 52, 152, 219, 255 }, WHITE, 22)) page = P_CI_NEEDS;
+            if (DrawInteractiveButton("上一步", btnPrev, (Color){ 235, 238, 245, 255 }, DARKGRAY, 20)) page = P_CI_EMOTION;
+            if (DrawInteractiveButton("下一步", btnNext, (Color){ 52, 152, 219, 255 }, WHITE, 20)) page = P_CI_NEEDS;
 
         // ==================== 6. 入住流程 3：需求複選 ====================
         } else if (page == P_CI_NEEDS) {
-            float cardW = 1200, cardH = 680;
-            Rectangle glassCard = { (SCREEN_W - cardW) / 2.0f, (SCREEN_H - cardH) / 2.0f, cardW, cardH };
-            DrawUnifiedBackground(SCREEN_W, SCREEN_H, runTime, glassCard);
+            float cardW = (screen_w * 0.94f > 1200) ? 1200.0f : (screen_w * 0.94f);
+            float cardH = (screen_h * 0.94f > 680)  ? 680.0f  : (screen_h * 0.94f);
+            Rectangle glassCard = { (screen_w - cardW) / 2.0f, (screen_h - cardH) / 2.0f, cardW, cardH };
+            DrawUnifiedBackground(screen_w, screen_h, runTime, glassCard);
 
-            DrawTextExBold("你現在需要什麼？（可複選）", (Vector2){ glassCard.x + 40, glassCard.y + 35 }, 30, 2, (Color){ 44, 62, 80, 255 });
+            DrawTextExBold("你現在需要什麼？（可複選）", (Vector2){ glassCard.x + 40, glassCard.y + 25 }, 28, 2, (Color){ 44, 62, 80, 255 });
+
+            float nCols = (cardW < 800) ? 3.0f : 4.0f;
+            float nBtnW = (cardW - 80.0f - (nCols - 1) * 16.0f) / nCols;
+            float nBtnH = (cardH < 620) ? 60.0f : 78.0f;
 
             for (int i = 0; i < 12; i++) {
-                Rectangle r = { glassCard.x + 40 + (i % 4) * 285, glassCard.y + 120 + (i / 4) * 110, 265, 80 };
+                int r = i / (int)nCols;
+                int c = i % (int)nCols;
+                Rectangle nRec = { glassCard.x + 40 + c * (nBtnW + 16), glassCard.y + 85 + r * (nBtnH + 16), nBtnW, nBtnH };
                 bool on = (work.needs & (1 << i)) != 0;
                 Color nc = on ? (Color){ 46, 204, 113, 255 } : (Color){ 240, 242, 248, 255 };
-                if (DrawInteractiveButton(needs_list[i], r, nc, on ? WHITE : DARKGRAY, 24)) {
+                if (DrawInteractiveButton(needs_list[i], nRec, nc, on ? WHITE : DARKGRAY, 22)) {
                     work.needs ^= (1 << i);
                 }
             }
 
-            Rectangle btnPrev = { glassCard.x + 40, glassCard.y + 590, 160, 54 };
-            Rectangle btnSave = { glassCard.x + 220, glassCard.y + 590, 200, 54 };
+            Rectangle btnPrev = { glassCard.x + 40, glassCard.y + cardH - 75, 150, 50 };
+            Rectangle btnSave = { glassCard.x + 210, glassCard.y + cardH - 75, 190, 50 };
 
-            if (DrawInteractiveButton("上一步", btnPrev, (Color){ 235, 238, 245, 255 }, DARKGRAY, 22)) page = P_CI_TEXT;
-            if (DrawInteractiveButton("完成入住並保存", btnSave, (Color){ 46, 204, 113, 255 }, WHITE, 22)) {
+            if (DrawInteractiveButton("上一步", btnPrev, (Color){ 235, 238, 245, 255 }, DARKGRAY, 20)) page = P_CI_TEXT;
+            if (DrawInteractiveButton("完成入住並保存", btnSave, (Color){ 46, 204, 113, 255 }, WHITE, 20)) {
                 save(&work, work_idx);
                 page = P_CALENDAR;
             }
 
         // ==================== 7. 房客詳情（4 分頁整合） ====================
         } else if (page == P_DETAIL) {
-            float cardW = 1200, cardH = 680;
-            Rectangle glassCard = { (SCREEN_W - cardW) / 2.0f, (SCREEN_H - cardH) / 2.0f, cardW, cardH };
-            DrawUnifiedBackground(SCREEN_W, SCREEN_H, runTime, glassCard);
+            float cardW = (screen_w * 0.94f > 1200) ? 1200.0f : (screen_w * 0.94f);
+            float cardH = (screen_h * 0.94f > 680)  ? 680.0f  : (screen_h * 0.94f);
+            Rectangle glassCard = { (screen_w - cardW) / 2.0f, (screen_h - cardH) / 2.0f, cardW, cardH };
+            DrawUnifiedBackground(screen_w, screen_h, runTime, glassCard);
 
             int e = work.emotion;
-            DrawTextExBold(TextFormat("房客詳情  |  %s", work.date), (Vector2){ glassCard.x + 40, glassCard.y + 30 }, 30, 2, (Color){ 44, 62, 80, 255 });
+            DrawTextExBold(TextFormat("房客詳情  |  %s", work.date), (Vector2){ glassCard.x + 40, glassCard.y + 20 }, 28, 2, (Color){ 44, 62, 80, 255 });
 
             const char *tab_names[4] = { "內容記錄", "需求複選", "Room Service", "回顧／退房" };
+            float tabW = (cardW - 80.0f) / 4.0f;
             for (int i = 0; i < 4; i++) {
-                Rectangle tabRec = { glassCard.x + 40 + i * 200, glassCard.y + 75, 185, 46 };
+                Rectangle tabRec = { glassCard.x + 40 + i * tabW, glassCard.y + 60, tabW - 10, 42 };
                 Color tc = (detail_tab == i) ? ecolor[e] : (Color){ 235, 238, 245, 255 };
-                if (DrawInteractiveButton(tab_names[i], tabRec, tc, (detail_tab == i) ? WHITE : DARKGRAY, 22)) {
+                if (DrawInteractiveButton(tab_names[i], tabRec, tc, (detail_tab == i) ? WHITE : DARKGRAY, 20)) {
                     detail_tab = i;
                     active_field = 0;
                 }
             }
 
+            float contentY = glassCard.y + 115;
+            float contentW = cardW - 80.0f;
+
             if (detail_tab == 0) {
+                float gap = (cardH - 210.0f) / 5.0f;
                 for (int i = 0; i < 5; i++) {
-                    DrawTextExBold(fields[i], (Vector2){ glassCard.x + 40, glassCard.y + 140 + i * 78 }, 18, 1, DARKGRAY);
-                    Rectangle b = { glassCard.x + 40, glassCard.y + 165 + i * 78, 1120, 48 };
+                    DrawTextExBold(fields[i], (Vector2){ glassCard.x + 40, contentY + i * gap }, 18, 1, DARKGRAY);
+                    Rectangle b = { glassCard.x + 40, contentY + 22 + i * gap, contentW, gap - 30 };
                     DrawRectangleRounded(b, 0.15f, 4, WHITE);
                     DrawRectangleLinesEx(b, 1, (Color){ 220, 226, 238, 255 });
-                    DrawTextExBold(work.text[i][0] ? work.text[i] : "（留白）", (Vector2){ b.x + 15, b.y + 12 }, 18, 1, BLACK);
+                    DrawTextExBold(work.text[i][0] ? work.text[i] : "（留白）", (Vector2){ b.x + 12, b.y + (b.height - 20) / 2.0f }, 18, 1, BLACK);
                 }
 
             } else if (detail_tab == 1) {
-                DrawTextExBold("點選可修改此日期的需求勾選：", (Vector2){ glassCard.x + 40, glassCard.y + 145 }, 22, 1, DARKGRAY);
+                DrawTextExBold("點選可修改此日期的需求勾選：", (Vector2){ glassCard.x + 40, contentY }, 20, 1, DARKGRAY);
+                float nCols = (cardW < 800) ? 3.0f : 4.0f;
+                float nW = (contentW - (nCols - 1) * 16.0f) / nCols;
+                float nH = 62.0f;
                 for (int i = 0; i < 12; i++) {
-                    Rectangle nr = { glassCard.x + 40 + (i % 4) * 285, glassCard.y + 195 + (i / 4) * 75, 265, 56 };
+                    int r = i / (int)nCols;
+                    int c = i % (int)nCols;
+                    Rectangle nr = { glassCard.x + 40 + c * (nW + 16), contentY + 35 + r * (nH + 16), nW, nH };
                     bool on = (work.needs & (1 << i)) != 0;
                     Color nc = on ? (Color){ 46, 204, 113, 255 } : (Color){ 240, 242, 248, 255 };
-                    if (DrawInteractiveButton(needs_list[i], nr, nc, on ? WHITE : DARKGRAY, 22)) {
+                    if (DrawInteractiveButton(needs_list[i], nr, nc, on ? WHITE : DARKGRAY, 20)) {
                         work.needs ^= (1 << i);
                     }
                 }
 
             } else if (detail_tab == 2) {
-                DrawTextExBold("此房間專屬練習（點擊標記完成）：", (Vector2){ glassCard.x + 40, glassCard.y + 140 }, 22, 1, DARKGRAY);
+                float splitW = (contentW - 30.0f) * 0.55f;
+                DrawTextExBold("專屬練習（點擊完成）：", (Vector2){ glassCard.x + 40, contentY }, 20, 1, DARKGRAY);
                 for (int i = 0; i < service_count[e]; i++) {
-                    Rectangle sr = { glassCard.x + 40, glassCard.y + 175 + i * 55, 620, 48 };
+                    Rectangle sr = { glassCard.x + 40, contentY + 30 + i * 52, splitW, 44 };
                     bool done = (work.completed & (1 << i)) != 0;
                     Color sc = done ? (Color){ 46, 204, 113, 255 } : (Color){ 240, 242, 248, 255 };
-                    if (DrawInteractiveButton(TextFormat("[%s] %s", done ? "V" : " ", services[e][i]), sr, sc, done ? WHITE : BLACK, 20)) {
+                    if (DrawInteractiveButton(TextFormat("[%s] %s", done ? "V" : " ", services[e][i]), sr, sc, done ? WHITE : BLACK, 19)) {
                         work.completed ^= (1 << i);
                         cur_service_idx = i;
                     }
                 }
-                DrawTextExBold(TextFormat("筆記：%s", services[e][cur_service_idx]), (Vector2){ glassCard.x + 690, glassCard.y + 140 }, 22, 1, (Color){ 200, 90, 120, 255 });
-                Rectangle boxNote = { glassCard.x + 690, glassCard.y + 175, 470, 270 };
+                float noteX = glassCard.x + 40 + splitW + 30.0f;
+                float noteW = contentW - splitW - 30.0f;
+                DrawTextExBold(TextFormat("筆記：%s", services[e][cur_service_idx]), (Vector2){ noteX, contentY }, 20, 1, (Color){ 200, 90, 120, 255 });
+                Rectangle boxNote = { noteX, contentY + 30, noteW, 240 };
                 DrawRectangleRounded(boxNote, 0.15f, 4, WHITE);
                 DrawRectangleLinesEx(boxNote, (active_field == 7) ? 2 : 1, (active_field == 7) ? (Color){ 52, 152, 219, 255 } : (Color){ 215, 220, 230, 255 });
-                DrawTextExBold(work.notes[cur_service_idx], (Vector2){ boxNote.x + 15, boxNote.y + 15 }, 20, 1, BLACK);
+                DrawTextExBold(work.notes[cur_service_idx], (Vector2){ boxNote.x + 12, boxNote.y + 12 }, 18, 1, BLACK);
 
                 if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mouse, boxNote)) active_field = 7;
 
             } else if (detail_tab == 3) {
-                DrawTextExBold("回顧後的情緒強度（0~5）：", (Vector2){ glassCard.x + 40, glassCard.y + 145 }, 22, 1, DARKGRAY);
+                DrawTextExBold("回顧後的情緒強度（0~5）：", (Vector2){ glassCard.x + 40, contentY }, 20, 1, DARKGRAY);
                 for (int i = 0; i <= 5; i++) {
-                    Rectangle btn = { glassCard.x + 40 + i * 90, glassCard.y + 185, 75, 48 };
+                    Rectangle btn = { glassCard.x + 40 + i * 85, contentY + 35, 72, 44 };
                     Color c = (work.after == i) ? (Color){ 52, 73, 94, 255 } : (Color){ 240, 242, 248, 255 };
-                    if (DrawInteractiveButton(TextFormat("%d", i), btn, c, (work.after == i) ? WHITE : BLACK, 22)) {
+                    if (DrawInteractiveButton(TextFormat("%d", i), btn, c, (work.after == i) ? WHITE : BLACK, 20)) {
                         work.after = i;
                     }
                 }
 
-                DrawTextExBold("想留下什麼回顧？", (Vector2){ glassCard.x + 40, glassCard.y + 260 }, 22, 1, DARKGRAY);
-                Rectangle boxRev = { glassCard.x + 40, glassCard.y + 295, 1120, 75 };
+                DrawTextExBold("想留下什麼回顧？", (Vector2){ glassCard.x + 40, contentY + 100 }, 20, 1, DARKGRAY);
+                Rectangle boxRev = { glassCard.x + 40, contentY + 130, contentW, 70 };
                 DrawRectangleRounded(boxRev, 0.15f, 4, WHITE);
                 DrawRectangleLinesEx(boxRev, (active_field == 6) ? 2 : 1, (active_field == 6) ? (Color){ 52, 152, 219, 255 } : (Color){ 215, 220, 230, 255 });
-                DrawTextExBold(work.review, (Vector2){ boxRev.x + 15, boxRev.y + 20 }, 22, 1, BLACK);
+                DrawTextExBold(work.review, (Vector2){ boxRev.x + 12, boxRev.y + 15 }, 20, 1, BLACK);
 
-                Rectangle btnCheckOut = { glassCard.x + 40, glassCard.y + 395, 420, 54 };
+                Rectangle btnCheckOut = { glassCard.x + 40, contentY + 225, 380, 50 };
                 Color coc = work.checked_out ? (Color){ 140, 150, 165, 255 } : (Color){ 255, 140, 0, 255 };
                 if (DrawInteractiveButton(work.checked_out ? "已退房（點擊改為住宿中）" : "住宿中（點擊辦理退房）", btnCheckOut, coc, WHITE, 20)) {
                     work.checked_out = !work.checked_out;
@@ -910,32 +928,34 @@ int main(void) {
                 if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mouse, boxRev)) active_field = 6;
             }
 
-            Rectangle btnSaveMod = { glassCard.x + 40, glassCard.y + 590, 180, 54 };
-            Rectangle btnDelRec  = { glassCard.x + 240, glassCard.y + 590, 180, 54 };
-            Rectangle btnBackCal = { glassCard.x + 440, glassCard.y + 590, 150, 54 };
+            Rectangle btnSaveMod = { glassCard.x + 40, glassCard.y + cardH - 65, 160, 48 };
+            Rectangle btnDelRec  = { glassCard.x + 220, glassCard.y + cardH - 65, 160, 48 };
+            Rectangle btnBackCal = { glassCard.x + 400, glassCard.y + cardH - 65, 130, 48 };
 
-            if (DrawInteractiveButton("保存所有修改", btnSaveMod, (Color){ 46, 204, 113, 255 }, WHITE, 22)) {
+            if (DrawInteractiveButton("保存所有修改", btnSaveMod, (Color){ 46, 204, 113, 255 }, WHITE, 20)) {
                 save(&work, work_idx);
                 page = P_CALENDAR;
             }
-            if (DrawInteractiveButton("刪除此紀錄", btnDelRec, (Color){ 231, 76, 60, 255 }, WHITE, 22)) {
+            if (DrawInteractiveButton("刪除此紀錄", btnDelRec, (Color){ 231, 76, 60, 255 }, WHITE, 20)) {
                 delete_record_item(work_idx);
                 page = P_CALENDAR;
             }
-            if (DrawInteractiveButton("返回月曆", btnBackCal, (Color){ 235, 238, 245, 255 }, DARKGRAY, 22)) {
+            if (DrawInteractiveButton("返回月曆", btnBackCal, (Color){ 235, 238, 245, 255 }, DARKGRAY, 20)) {
                 page = P_CALENDAR;
             }
 
         // ==================== 8. 音樂設定 ====================
         } else if (page == P_MUSIC) {
-            float cardW = 1000, cardH = 620;
-            Rectangle glassCard = { (SCREEN_W - cardW) / 2.0f, (SCREEN_H - cardH) / 2.0f, cardW, cardH };
-            DrawUnifiedBackground(SCREEN_W, SCREEN_H, runTime, glassCard);
+            float cardW = (screen_w < 950) ? (screen_w * 0.92f) : 900.0f;
+            float cardH = (screen_h < 640) ? (screen_h * 0.92f) : 580.0f;
+            Rectangle glassCard = { (screen_w - cardW) / 2.0f, (screen_h - cardH) / 2.0f, cardW, cardH };
+            DrawUnifiedBackground(screen_w, screen_h, runTime, glassCard);
 
-            DrawTextExBold("音樂設定", (Vector2){ glassCard.x + 60, glassCard.y + 50 }, 36, 2, (Color){ 44, 62, 80, 255 });
+            DrawTextExBold("音樂設定", (Vector2){ glassCard.x + 40, glassCard.y + 40 }, 34, 2, (Color){ 44, 62, 80, 255 });
 
+            float tBtnW = (cardW - 80 > 480) ? 480 : (cardW - 80);
             for (int i = 0; i < NUM_TRACKS; i++) {
-                Rectangle btnTrack = { glassCard.x + 60, glassCard.y + 140 + i * 85, 480, 68 };
+                Rectangle btnTrack = { glassCard.x + 40, glassCard.y + 110 + i * 78, tBtnW, 64 };
                 Color c = (cur_track == i && music_playing) ? (Color){ 46, 204, 113, 255 } : (Color){ 235, 238, 245, 255 };
                 if (DrawInteractiveButton(TextFormat("BGM %d: %s", i + 1, track_names[i]), btnTrack, c, (cur_track == i && music_playing) ? WHITE : BLACK, 22)) {
                     StopMusicStream(bgm_tracks[cur_track]);
@@ -945,9 +965,9 @@ int main(void) {
                 }
             }
 
-            Rectangle btnToggle = { glassCard.x + 60, glassCard.y + 420, 220, 56 };
+            Rectangle btnToggle = { glassCard.x + 40, glassCard.y + 360, 200, 52 };
             Color tCol = music_playing ? (Color){ 231, 76, 60, 255 } : (Color){ 52, 152, 219, 255 };
-            if (DrawInteractiveButton(music_playing ? "靜音 / Mute" : "播放 / Play", btnToggle, tCol, WHITE, 22)) {
+            if (DrawInteractiveButton(music_playing ? "靜音 / Mute" : "播放 / Play", btnToggle, tCol, WHITE, 20)) {
                 if (music_playing) {
                     PauseMusicStream(bgm_tracks[cur_track]);
                     music_playing = false;
@@ -957,8 +977,8 @@ int main(void) {
                 }
             }
 
-            Rectangle btnBack = { glassCard.x + 60, glassCard.y + 510, 160, 54 };
-            if (DrawInteractiveButton("返回首頁", btnBack, (Color){ 140, 150, 165, 255 }, WHITE, 22)) {
+            Rectangle btnBack = { glassCard.x + 40, glassCard.y + cardH - 80, 150, 50 };
+            if (DrawInteractiveButton("返回首頁", btnBack, (Color){ 140, 150, 165, 255 }, WHITE, 20)) {
                 page = P_LOBBY;
             }
         }
