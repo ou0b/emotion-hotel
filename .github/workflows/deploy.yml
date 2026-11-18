@@ -41,7 +41,7 @@ jobs:
             --preload-file "AEROHEAD - Fragments.mp3" \
             --preload-file "Nettson - Last Promise.mp3" \
             --preload-file "Savfk - Rounding.mp3" \
-            --shell-file ./raylib/src/shell.html
+            --shell-file minshell.html
 
       - name: 發布到 GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
