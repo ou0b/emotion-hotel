@@ -123,14 +123,14 @@ static void InitParticles(int w, int h) {
     // 鎖定隨機種子，確保所有平台每次跑出來的隨機位置與速度完全一致
     srand(12345);
 
-    // 專屬精心調配的晨曦光點色盤（天藍、溫暖金黃、粉橘、海綠、柔和淡紫）
+    // 專屬精心調配的晨曦光點色盤（天藍、金黃、粉橘、海綠、淡紫）
     static const Color fixed_palette[6] = {
-        { 120, 170, 245, 80 },  // 澄澈天藍
-        { 255, 215, 100, 85 },  // 溫暖金黃
-        { 255, 160, 110, 80 },  // 晨曦粉橘
-        { 255, 130, 130, 75 },  // 柔和淡緋
-        { 90, 215, 150, 80 },   // 清新海綠
-        { 180, 140, 235, 75 }   // 夢幻淡紫
+        { 120, 170, 245, 80 },  // 天藍
+        { 255, 215, 100, 85 },  // 金黃
+        { 255, 160, 110, 80 },  // 粉橘
+        { 255, 130, 130, 75 },  // 淡緋
+        { 90, 215, 150, 80 },   // 海綠
+        { 180, 140, 235, 75 }   // 淡紫
     };
 
     for (int i = 0; i < NUM_PARTICLES; i++) {
@@ -150,12 +150,14 @@ static void UpdateAndDrawParticles(int w, int h, float time) {
         particles[i].pos.x += sinf(time * 0.7f + particles[i].waveOffset) * 0.45f;
         if (particles[i].pos.y < -particles[i].radius * 2) {
             particles[i].pos.y = h + particles[i].radius * 2;
-            particles[i].pos.x = (float)(rand() % w);
+            particles[i].pos.x = (float)(rand() % (w > 0 ? w : DEFAULT_W));
         }
+        // 只繪製純粹通透的彩色光點，絕不被白色覆蓋
         DrawCircleV(particles[i].pos, particles[i].radius, particles[i].color);
-        DrawCircleV(particles[i].pos, particles[i].radius * 0.45f, (Color){ 255, 255, 255, 90 });
+        DrawCircleLines((int)particles[i].pos.x, (int)particles[i].pos.y, particles[i].radius, (Color){ particles[i].color.r, particles[i].color.g, particles[i].color.b, 120 });
     }
 }
+
 
 static void DrawUnifiedBackground(int w, int h, float time, Rectangle glassCard) {
     DrawRectangleGradientV(0, 0, w, h, (Color){ 255, 242, 238, 255 }, (Color){ 232, 242, 252, 255 });
