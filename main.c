@@ -120,15 +120,29 @@ typedef struct {
 static Particle particles[NUM_PARTICLES];
 
 static void InitParticles(int w, int h) {
+    // 鎖定隨機種子，確保所有平台每次跑出來的隨機位置與速度完全一致
+    srand(12345);
+
+    // 專屬精心調配的晨曦光點色盤（天藍、溫暖金黃、粉橘、海綠、柔和淡紫）
+    static const Color fixed_palette[6] = {
+        { 120, 170, 245, 80 },  // 澄澈天藍
+        { 255, 215, 100, 85 },  // 溫暖金黃
+        { 255, 160, 110, 80 },  // 晨曦粉橘
+        { 255, 130, 130, 75 },  // 柔和淡緋
+        { 90, 215, 150, 80 },   // 清新海綠
+        { 180, 140, 235, 75 }   // 夢幻淡紫
+    };
+
     for (int i = 0; i < NUM_PARTICLES; i++) {
         particles[i].pos = (Vector2){ (float)(rand() % (w > 0 ? w : DEFAULT_W)), (float)(rand() % (h > 0 ? h : DEFAULT_H)) };
-        particles[i].radius = 12.0f + (float)(rand() % 26);
-        particles[i].speedY = 0.25f + (float)(rand() % 45) / 100.0f;
-        particles[i].waveOffset = (float)(rand() % 360);
-        Color base = ecolor[rand() % 6];
-        particles[i].color = (Color){ base.r, base.g, base.b, 65 };
+        particles[i].radius = 14.0f + (float)(rand() % 24);
+        particles[i].speedY = 0.25f + (float)(rand() % 40) / 100.0f;
+        particles[i].waveOffset = (float)(i * 25);
+        // 按順序均勻分配 6 種色調，不再隨機抓到暗沉顏色
+        particles[i].color = fixed_palette[i % 6];
     }
 }
+
 
 static void UpdateAndDrawParticles(int w, int h, float time) {
     for (int i = 0; i < NUM_PARTICLES; i++) {
