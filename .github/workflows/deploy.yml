@@ -1,0 +1,44 @@
+name: Deploy Emotion Hotel Web
+
+on:
+  push:
+    branches: [ main ] # 當你更新 main 分支時自動執行
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下載程式碼
+        uses: actions/checkout@v3
+
+      - name: 安裝 Emscripten (Web 編譯器)
+        uses: mymindstorm/setup-emsdk@v12
+        with:
+          version: 3.1.50
+
+      - name: 下載並編譯 raylib 網頁版
+        run: |
+          git clone --depth 1 https://github.com/raysan5/raylib.git raylib
+          cd raylib/src
+          emmake make PLATFORM=PLATFORM_WEB -B
+          cd ../..
+
+      - name: 編譯 main.c 為 WebAssembly 網頁
+        run: |
+          mkdir build
+          emcc -o build/index.html main.c \
+            -Os -Wall \
+            -I./raylib/src ./raylib/src/libraylib.a \
+            -s USE_GLFW=3 -s ASYNCIFY -s TOTAL_MEMORY=67108864 \
+            -DPLATFORM_WEB \
+            --preload-file word.ttf \
+            --preload-file bgm1.mp3 \
+            --preload-file bgm2.mp3 \
+            --preload-file bgm3.mp3 \
+            --shell-file ./raylib/src/shell.html
+
+      - name: 發布到 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
