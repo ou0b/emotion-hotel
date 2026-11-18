@@ -7,38 +7,92 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
-            width: 100%; height: 100%; overflow: hidden;
-            background: #f7f8fb;
-            display: flex; align-items: center; justify-content: center;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            /* 【修復 1】：背景改為與 C 語言完全一致的晨曦粉暖漸層，徹底消滅突兀黑邊！ */
+            background: linear-gradient(180deg, #fff2ee 0%, #e8f2fc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
         }
-        /* 畫布強制 100% 填滿視窗，不留任何黑邊 */
+
+        /* 【修復 2】：高畫質畫布渲染，避免瀏覽器拉伸抹糊字型 */
         canvas.emscripten {
-            border: 0 none; outline: none;
-            width: 100vw;
-            height: 100vh;
+            border: 0 none;
+            outline: none;
             display: block;
+            width: 100vw;
+            height: 56.25vw; /* 保持標準 16:9 比例 */
+            max-height: 100vh;
+            max-width: 177.78vh;
+            background-color: transparent;
+            /* 強制高清晰銳利度與抗鋸齒 */
             image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
+            box-shadow: 0 12px 48px rgba(100, 110, 140, 0.15);
+            border-radius: 8px;
+        }
+
+        /* 浮動全螢幕按鈕（精緻柔白磨砂風格） */
+        #fs-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50px;
+            padding: 9px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+        #fs-btn:hover {
+            background: #ffffff;
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 手機直立時的貼心旋轉提示 */
+        #rotate-hint {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(40, 50, 75, 0.96);
+            color: #ffffff;
+            z-index: 999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+        }
+        #rotate-hint .icon { font-size: 52px; margin-bottom: 16px; }
+        @media screen and (orientation: portrait) and (max-width: 900px) {
+            #rotate-hint { display: flex; }
         }
     </style>
 </head>
 <body>
+    <div id="rotate-hint">
+        <div class="icon">📱 ↺</div>
+        <h2>請將手機轉為橫向</h2>
+        <p style="margin-top: 10px; opacity: 0.85;">橫向瀏覽才能獲得最溫暖舒適的飯店體驗喔！</p>
+    </div>
+
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    
+    <button id="fs-btn" onclick="toggleFullScreen()">⛶ 全螢幕 / Fullscreen</button>
 
     <script type='text/javascript'>
-        function resizeCanvas() {
-            var canvas = document.getElementById('canvas');
-            // 取得高 DPI 螢幕真實像素比 (Retina 螢幕 2x, 正常 1x)
-            var dpr = window.devicePixelRatio || 1;
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        window.addEventListener('orientationchange', resizeCanvas);
-
         var Module = {
-            preRun: [resizeCanvas],
+            preRun: [],
             postRun: [],
             print: function(text) { console.log(text); },
             printErr: function(text) { console.error(text); },
@@ -47,6 +101,23 @@
                 return canvas;
             })()
         };
+
+        function toggleFullScreen() {
+            var canvas = document.getElementById('canvas');
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (canvas.requestFullscreen) {
+                    canvas.requestFullscreen();
+                } else if (canvas.webkitRequestFullscreen) {
+                    canvas.webkitRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
     </script>
     {{{ SCRIPT }}}
 </body>
