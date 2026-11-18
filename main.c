@@ -10,7 +10,9 @@
 #include <time.h>
 #include <math.h>
 #include <errno.h>
-
+#if defined(PLATFORM_WEB)
+    #include <emscripten/emscripten.h>
+#endif
 #define SCREEN_W 1280
 #define SCREEN_H 720
 #define MAX_RECORDS 200
@@ -495,14 +497,29 @@ int main(void) {
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
         float runTime = (float)GetTime();
 
-                // 專為 Windows 打造的無痛最大化/全螢幕切換
-        if (IsKeyPressed(KEY_F11)) {
+                
+                if (IsKeyPressed(KEY_F11)) {
+        #if defined(PLATFORM_WEB)
+            // 網頁版：直接呼叫瀏覽器全螢幕 API
+            emscripten_run_script(
+                "var c = document.getElementById('canvas');"
+                "if (!document.fullscreenElement) {"
+                "    if (c.requestFullscreen) c.requestFullscreen();"
+                "    else if (c.webkitRequestFullscreen) c.webkitRequestFullscreen();"
+                "} else {"
+                "    if (document.exitFullscreen) document.exitFullscreen();"
+                "}"
+            );
+        #else
+            // Windows 本地版：使用原本完美的最大化視窗
             if (IsWindowMaximized()) {
                 RestoreWindow();
             } else {
                 MaximizeWindow();
             }
+        #endif
         }
+
 
         if (music_playing) UpdateMusicStream(bgm_tracks[cur_track]);
 
